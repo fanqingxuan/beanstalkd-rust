@@ -95,6 +95,29 @@ target/release/beanstalkctl
 RUSTC=$(rustup which rustc) cargo build --release
 ```
 
+## GitHub Release 构建
+
+仓库已包含 GitHub Actions workflow：`.github/workflows/release.yml`。
+
+- push 到 `main` 和 pull request 会运行 workspace 测试并构建 release 版本。
+- 可以在 GitHub Actions 页面用 `workflow_dispatch` 手动启动多平台构建。
+- 推送匹配 `v*` 的 tag，例如 `v1.13.0-rust.1`，会创建 GitHub Release，并上传
+  Linux、macOS、Windows 压缩包。
+
+每个压缩包包含：
+
+- `beanstalkd`
+- `beanstalkctl`
+- `README.md`
+- `README.zh-CN.md`
+
+从本地创建 release：
+
+```sh
+git tag v1.13.0-rust.1
+git push origin v1.13.0-rust.1
+```
+
 ## 运行
 
 使用默认 TCP 端口：

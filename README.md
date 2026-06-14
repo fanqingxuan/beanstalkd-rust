@@ -99,6 +99,31 @@ explicit Rust compiler:
 RUSTC=$(rustup which rustc) cargo build --release
 ```
 
+## GitHub Release Builds
+
+The repository includes a GitHub Actions workflow at
+`.github/workflows/release.yml`.
+
+- Pushes to `main` and pull requests run workspace tests and release builds.
+- `workflow_dispatch` lets you start a multi-platform build manually from the
+  GitHub Actions page.
+- Tags matching `v*`, for example `v1.13.0-rust.1`, create a GitHub Release and
+  upload Linux, macOS, and Windows packages.
+
+Each package contains:
+
+- `beanstalkd`
+- `beanstalkctl`
+- `README.md`
+- `README.zh-CN.md`
+
+Create a release from your local checkout:
+
+```sh
+git tag v1.13.0-rust.1
+git push origin v1.13.0-rust.1
+```
+
 ## Run
 
 Default TCP port:
