@@ -41,18 +41,18 @@ impl Write for Connection {
 }
 
 pub(crate) fn connect(cfg: &Config) -> Result<Connection> {
-    if let Some(path) = cfg.addr.strip_prefix("unix:") {
-        #[cfg(unix)]
-        {
+    #[cfg(unix)]
+    {
+        if let Some(path) = cfg.addr.strip_prefix("unix:") {
             return Ok(Connection::Unix(UnixStream::connect(path)?));
         }
-        #[cfg(not(unix))]
-        {
-            use crate::error::CliError;
-            return Err(CliError::new(
-                "Unix sockets are not supported on this platform",
-            ));
-        }
+    }
+    #[cfg(not(unix))]
+    if cfg.addr.starts_with("unix:") {
+        use crate::error::CliError;
+        return Err(CliError::new(
+            "Unix sockets are not supported on this platform",
+        ));
     }
     Ok(Connection::Tcp(TcpStream::connect(format!(
         "{}:{}",

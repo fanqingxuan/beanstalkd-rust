@@ -117,6 +117,10 @@ Each package contains:
 - `README.md`
 - `README.zh-CN.md`
 
+Windows packages support TCP listeners and TCP client connections. Unix sockets,
+systemd socket activation, SIGUSR1 drain mode, and `-u USER` privilege dropping
+are Unix-only features.
+
 Create a release from your local checkout:
 
 ```sh

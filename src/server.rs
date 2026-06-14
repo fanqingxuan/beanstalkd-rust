@@ -2,19 +2,27 @@ use crate::config::{drop_privileges, parse_args};
 use crate::model::{ActorMsg, CommandResult};
 use crate::protocol::read_command;
 use crate::state::ServerState;
+#[cfg(unix)]
 use std::env;
+#[cfg(unix)]
 use std::fs;
+#[cfg(unix)]
 use std::io;
+#[cfg(unix)]
 use std::os::fd::FromRawFd;
 use std::process;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream, UnixListener, UnixStream};
+use tokio::net::{TcpListener, TcpStream};
+#[cfg(unix)]
+use tokio::net::{UnixListener, UnixStream};
+#[cfg(unix)]
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::{mpsc, oneshot};
 
 enum Listener {
     Tcp(TcpListener),
+    #[cfg(unix)]
     Unix(UnixListener),
 }
 
@@ -46,7 +54,12 @@ pub(crate) async fn run() {
             }
         }
     });
-    let drainer = tx.clone();
+    spawn_signal_drainer(tx.clone());
+    accept_loop(listener, tx).await;
+}
+
+#[cfg(unix)]
+fn spawn_signal_drainer(drainer: mpsc::Sender<ActorMsg>) {
     tokio::spawn(async move {
         if let Ok(mut sigusr1) = signal(SignalKind::user_defined1()) {
             while sigusr1.recv().await.is_some() {
@@ -56,31 +69,46 @@ pub(crate) async fn run() {
             }
         }
     });
-    accept_loop(listener, tx).await;
 }
+
+#[cfg(not(unix))]
+fn spawn_signal_drainer(_drainer: mpsc::Sender<ActorMsg>) {}
 
 async fn bind_listener(cfg: &crate::config::Config) -> Listener {
     if let Some(listener) = inherited_systemd_listener() {
         return listener;
     }
     if cfg.addr.starts_with("unix:") {
-        let path = cfg.addr.trim_start_matches("unix:");
-        let _ = fs::remove_file(path);
-        let listener = UnixListener::bind(path).unwrap_or_else(|err| {
-            eprintln!("beanstalkd: bind {path}: {err}");
+        #[cfg(unix)]
+        {
+            return bind_unix_listener(cfg);
+        }
+        #[cfg(not(unix))]
+        {
+            eprintln!("beanstalkd: Unix sockets are not supported on this platform");
             process::exit(111);
-        });
-        Listener::Unix(listener)
-    } else {
-        let bind = format!("{}:{}", cfg.addr, cfg.port);
-        let listener = TcpListener::bind(&bind).await.unwrap_or_else(|err| {
-            eprintln!("beanstalkd: bind {bind}: {err}");
-            process::exit(111);
-        });
-        Listener::Tcp(listener)
+        }
     }
+    let bind = format!("{}:{}", cfg.addr, cfg.port);
+    let listener = TcpListener::bind(&bind).await.unwrap_or_else(|err| {
+        eprintln!("beanstalkd: bind {bind}: {err}");
+        process::exit(111);
+    });
+    Listener::Tcp(listener)
 }
 
+#[cfg(unix)]
+fn bind_unix_listener(cfg: &crate::config::Config) -> Listener {
+    let path = cfg.addr.trim_start_matches("unix:");
+    let _ = fs::remove_file(path);
+    let listener = UnixListener::bind(path).unwrap_or_else(|err| {
+        eprintln!("beanstalkd: bind {path}: {err}");
+        process::exit(111);
+    });
+    Listener::Unix(listener)
+}
+
+#[cfg(unix)]
 fn inherited_systemd_listener() -> Option<Listener> {
     let listen_pid = env::var("LISTEN_PID").ok()?.parse::<u32>().ok()?;
     if listen_pid != process::id() {
@@ -132,6 +160,12 @@ fn inherited_systemd_listener() -> Option<Listener> {
     }
 }
 
+#[cfg(not(unix))]
+fn inherited_systemd_listener() -> Option<Listener> {
+    None
+}
+
+#[cfg(unix)]
 fn socket_family(fd: i32) -> Option<i32> {
     let mut storage = std::mem::MaybeUninit::<libc::sockaddr_storage>::uninit();
     let mut len = std::mem::size_of::<libc::sockaddr_storage>() as libc::socklen_t;
@@ -149,6 +183,7 @@ fn socket_family(fd: i32) -> Option<i32> {
     Some(storage.ss_family as i32)
 }
 
+#[cfg(unix)]
 fn set_nonblocking(fd: i32) -> io::Result<()> {
     let flags = unsafe { libc::fcntl(fd, libc::F_GETFL, 0) };
     if flags < 0 {
@@ -163,6 +198,7 @@ fn set_nonblocking(fd: i32) -> io::Result<()> {
 
 async fn accept_loop(listener: Listener, tx: mpsc::Sender<ActorMsg>) {
     match listener {
+        #[cfg(unix)]
         Listener::Unix(listener) => loop {
             match listener.accept().await {
                 Ok((stream, _)) => {
@@ -199,6 +235,7 @@ async fn actor(mut state: ServerState, mut rx: mpsc::Receiver<ActorMsg>) {
                 let result = state.command(conn_id, cmd);
                 let _ = tx.send(result);
             }
+            #[cfg(unix)]
             ActorMsg::Drain => state.enter_drain_mode(),
             ActorMsg::Tick => state.tick(),
         }
@@ -207,6 +244,7 @@ async fn actor(mut state: ServerState, mut rx: mpsc::Receiver<ActorMsg>) {
 
 trait AsyncBeanstalkStream: AsyncReadExt + AsyncWriteExt + Unpin + Send + 'static {}
 impl AsyncBeanstalkStream for TcpStream {}
+#[cfg(unix)]
 impl AsyncBeanstalkStream for UnixStream {}
 
 async fn handle_stream<S: AsyncBeanstalkStream>(mut stream: S, tx: mpsc::Sender<ActorMsg>) {

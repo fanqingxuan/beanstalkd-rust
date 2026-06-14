@@ -259,6 +259,7 @@ pub(crate) enum ActorMsg {
         cmd: Command,
         tx: oneshot::Sender<CommandResult>,
     },
+    #[cfg(unix)]
     Drain,
     Tick,
 }

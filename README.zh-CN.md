@@ -111,6 +111,9 @@ RUSTC=$(rustup which rustc) cargo build --release
 - `README.md`
 - `README.zh-CN.md`
 
+Windows 压缩包支持 TCP 监听和 TCP 客户端连接。Unix socket、systemd socket activation、
+SIGUSR1 drain mode，以及 `-u USER` 权限切换属于 Unix-only 功能。
+
 从本地创建 release：
 
 ```sh

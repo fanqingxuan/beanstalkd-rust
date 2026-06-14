@@ -938,6 +938,7 @@ impl ServerState {
         self.process_queue();
     }
 
+    #[cfg(unix)]
     pub(crate) fn enter_drain_mode(&mut self) {
         self.draining = true;
     }
@@ -1262,6 +1263,7 @@ kicks: {}\n\
     }
 }
 
+#[cfg(unix)]
 fn rusage_times() -> ((i64, i64), (i64, i64)) {
     let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
     let rc = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
@@ -1275,6 +1277,12 @@ fn rusage_times() -> ((i64, i64), (i64, i64)) {
     )
 }
 
+#[cfg(not(unix))]
+fn rusage_times() -> ((i64, i64), (i64, i64)) {
+    ((0, 0), (0, 0))
+}
+
+#[cfg(unix)]
 fn uname_info() -> (String, String, String) {
     let mut info = std::mem::MaybeUninit::<libc::utsname>::uninit();
     let rc = unsafe { libc::uname(info.as_mut_ptr()) };
@@ -1293,6 +1301,16 @@ fn uname_info() -> (String, String, String) {
     )
 }
 
+#[cfg(not(unix))]
+fn uname_info() -> (String, String, String) {
+    (
+        "unknown".to_string(),
+        std::env::consts::OS.to_string(),
+        std::env::consts::ARCH.to_string(),
+    )
+}
+
+#[cfg(unix)]
 fn c_chars_to_string(buf: &[libc::c_char]) -> String {
     let bytes: Vec<u8> = buf
         .iter()

@@ -2,6 +2,7 @@ use crate::constants::{
     DEFAULT_ADDR, DEFAULT_FSYNC_MS, DEFAULT_PORT, FILE_SIZE_DEFAULT, JOB_DATA_SIZE_LIMIT_DEFAULT,
     JOB_DATA_SIZE_LIMIT_MAX, VERSION,
 };
+#[cfg(unix)]
 use nix::unistd::{setgid, setuid, Gid, Uid, User};
 use std::env;
 use std::path::PathBuf;
@@ -145,6 +146,11 @@ Options:\n\
 }
 
 pub(crate) fn drop_privileges(user: &str) {
+    drop_privileges_platform(user)
+}
+
+#[cfg(unix)]
+fn drop_privileges_platform(user: &str) {
     let found = User::from_name(user).unwrap_or_else(|err| {
         eprintln!("beanstalkd: getpwnam(\"{user}\"): {err}");
         process::exit(32);
@@ -161,4 +167,10 @@ pub(crate) fn drop_privileges(user: &str) {
         eprintln!("beanstalkd: setuid({} \"{}\"): {err}", user.uid, user.name);
         process::exit(34);
     }
+}
+
+#[cfg(not(unix))]
+fn drop_privileges_platform(user: &str) {
+    eprintln!("beanstalkd: -u {user} is not supported on this platform");
+    process::exit(5);
 }
