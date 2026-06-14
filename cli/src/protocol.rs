@@ -33,7 +33,47 @@ pub(crate) fn read_response(conn: &mut Connection) -> Result<Vec<u8>> {
 }
 
 pub(crate) fn print_response(response: Vec<u8>) {
+    if print_job_response(&response).is_ok_and(|printed| printed) {
+        return;
+    }
+    print_raw_response(&response);
+}
+
+pub(crate) fn print_raw_response(response: &[u8]) {
     io::stdout().write_all(&response).ok();
+}
+
+fn print_job_response(response: &[u8]) -> io::Result<bool> {
+    let Some((line, body)) = split_response(response) else {
+        return Ok(false);
+    };
+    let fields: Vec<&str> = line.split_whitespace().collect();
+    let [status @ ("FOUND" | "RESERVED"), id, bytes] = fields.as_slice() else {
+        return Ok(false);
+    };
+
+    let mut stdout = io::stdout();
+    writeln!(stdout, "status: {}", status.to_ascii_lowercase())?;
+    writeln!(stdout, "job id: {id}")?;
+    writeln!(stdout, "bytes: {bytes}")?;
+    writeln!(stdout, "body:")?;
+    stdout.write_all(body)?;
+    if !body.ends_with(b"\n") {
+        writeln!(stdout)?;
+    }
+    Ok(true)
+}
+
+fn split_response(response: &[u8]) -> Option<(&str, &[u8])> {
+    let header_end = response.windows(2).position(|window| window == b"\r\n")?;
+    let line = std::str::from_utf8(&response[..header_end]).ok()?;
+    let body_start = header_end + 2;
+    let body_end = response
+        .get(body_start..)?
+        .strip_suffix(b"\r\n")
+        .map(|body| body_start + body.len())
+        .unwrap_or(response.len());
+    Some((line, &response[body_start..body_end]))
 }
 
 pub(crate) fn reserved_id(response: &[u8]) -> Option<String> {

@@ -131,6 +131,16 @@ beanstalkctl using
 beanstalkctl watching
 ```
 
+Job 响应会以带标签的格式打印：
+
+```text
+status: found
+job id: 1
+bytes: 4
+body:
+name
+```
+
 ## Stats
 
 ```sh
@@ -185,6 +195,10 @@ beanstalkctl> exit
 
 `exit` 和 `quit` 会退出交互模式。输入 `help` 可以打印命令摘要。同一个交互会话会复用同一
 条连接，因此 watched tubes 等连接状态会在命令之间保留。
+
+在真实终端中，交互模式支持行编辑、内存中的命令历史，以及类似 redis-cli 的 Tab 补全。
+Tab 会在完整命令和完整选项 token 之间循环，例如 `put`、`peek-ready`、`put --tube`、
+`put --ttr`、`reserve --watch` 和 `reserve --timeout`。
 
 ## 退出码
 

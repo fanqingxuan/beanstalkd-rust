@@ -149,6 +149,9 @@ target/release/beanstalkctl reserve --timeout 5 --delete
 # 删除 job。
 target/release/beanstalkctl delete 1
 
+# 查看 job 内容但不消费。
+target/release/beanstalkctl peek 1
+
 # 查看 stats。
 target/release/beanstalkctl stats
 target/release/beanstalkctl stats tube default
@@ -164,6 +167,9 @@ target/release/beanstalkctl raw stats
 # 启动交互模式。
 target/release/beanstalkctl
 ```
+
+交互模式支持行编辑、历史，以及类似 redis-cli 的完整命令/选项 Tab 补全。详情见
+[cli/README.zh-CN.md](cli/README.zh-CN.md)。
 
 ## 命令行参数
 

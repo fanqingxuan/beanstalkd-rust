@@ -132,6 +132,16 @@ beanstalkctl using
 beanstalkctl watching
 ```
 
+Job responses are printed with labels:
+
+```text
+status: found
+job id: 1
+bytes: 4
+body:
+name
+```
+
 ## Stats
 
 ```sh
@@ -188,6 +198,11 @@ beanstalkctl> exit
 `exit` and `quit` leave interactive mode. Use `help` to print the command
 summary. The same connection is reused for the whole session, so connection
 state such as watched tubes is preserved between commands.
+
+When running in a real terminal, interactive mode supports line editing,
+in-memory command history, and redis-cli-style Tab completion. Tab cycles
+through complete command and option tokens such as `put`, `peek-ready`,
+`put --tube`, `put --ttr`, `reserve --watch`, and `reserve --timeout`.
 
 ## Exit Codes
 

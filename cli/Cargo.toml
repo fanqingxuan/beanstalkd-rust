@@ -6,3 +6,6 @@ edition = "2021"
 [[bin]]
 name = "beanstalkctl"
 path = "src/main.rs"
+
+[dependencies]
+rustyline = "18.0.0"

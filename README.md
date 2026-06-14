@@ -154,6 +154,9 @@ target/release/beanstalkctl reserve --timeout 5 --delete
 # Delete a job.
 target/release/beanstalkctl delete 1
 
+# Peek at a job without consuming it.
+target/release/beanstalkctl peek 1
+
 # Inspect stats.
 target/release/beanstalkctl stats
 target/release/beanstalkctl stats tube default
@@ -169,6 +172,10 @@ target/release/beanstalkctl raw stats
 # Start an interactive session.
 target/release/beanstalkctl
 ```
+
+Interactive mode supports line editing, history, and redis-cli-style Tab
+completion for whole command and option tokens. See [cli/README.md](cli/README.md)
+for details.
 
 ## Command-Line Options
 

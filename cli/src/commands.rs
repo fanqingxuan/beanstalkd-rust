@@ -1,7 +1,9 @@
 use crate::args::take_value;
 use crate::client::Connection;
 use crate::error::{CliError, Result};
-use crate::protocol::{print_response, read_response, reserved_id, send_bytes, send_line};
+use crate::protocol::{
+    print_raw_response, print_response, read_response, reserved_id, send_bytes, send_line,
+};
 use crate::usage::usage;
 use std::fs;
 use std::io::{self, Read};
@@ -198,6 +200,6 @@ fn cmd_raw(conn: &mut Connection, args: Vec<String>) -> Result<()> {
         line.push_str("\r\n");
     }
     send_line(conn, &line)?;
-    print_response(read_response(conn)?);
+    print_raw_response(&read_response(conn)?);
     Ok(())
 }
